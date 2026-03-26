@@ -1,0 +1,193 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "description": "TensorFirst Memory Manager — real-time zone utilization, VRAM, KV-cache, hugepages, and pressure monitoring",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "Memory Zone Utilization",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "expr": "spirit_memory_zone_used_bytes",
+          "legendFormat": "{{zone}} used"
+        },
+        {
+          "expr": "spirit_memory_zone_limit_bytes",
+          "legendFormat": "{{zone}} limit"
+        }
+      ]
+    },
+    {
+      "title": "Zone Utilization %",
+      "type": "gauge",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "orange", "value": 85 },
+              { "color": "red", "value": 95 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "spirit_memory_zone_used_bytes / spirit_memory_zone_limit_bytes * 100",
+          "legendFormat": "{{zone}}"
+        }
+      ]
+    },
+    {
+      "title": "GPU VRAM Usage",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "expr": "spirit_vram_used_bytes",
+          "legendFormat": "{{device}} used"
+        },
+        {
+          "expr": "spirit_vram_reserved_bytes",
+          "legendFormat": "{{device}} reserved"
+        }
+      ]
+    },
+    {
+      "title": "KV-Cache Pages",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "expr": "spirit_kv_pages_active",
+          "legendFormat": "Active"
+        },
+        {
+          "expr": "spirit_kv_pages_swapped",
+          "legendFormat": "Swapped to NVMe"
+        },
+        {
+          "expr": "spirit_kv_sessions",
+          "legendFormat": "Sessions"
+        }
+      ]
+    },
+    {
+      "title": "KV-Cache Operations",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "spirit_kv_snapshots_total",
+          "legendFormat": "Snapshots"
+        },
+        {
+          "expr": "spirit_kv_forks_total",
+          "legendFormat": "Forks"
+        },
+        {
+          "expr": "spirit_kv_cow_copies_total",
+          "legendFormat": "COW Copies"
+        }
+      ]
+    },
+    {
+      "title": "Hugepages",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "expr": "spirit_hugepages_used",
+          "legendFormat": "Used"
+        },
+        {
+          "expr": "spirit_hugepages_free",
+          "legendFormat": "Free"
+        }
+      ]
+    },
+    {
+      "title": "Memory Pressure",
+      "type": "gauge",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 16 },
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 4,
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "orange", "value": 2 },
+              { "color": "red", "value": 3 },
+              { "color": "dark-red", "value": 4 }
+            ]
+          },
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "None" }, "1": { "text": "Low" }, "2": { "text": "Medium" }, "3": { "text": "High" }, "4": { "text": "Critical" } } }
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "spirit_memory_pressure_level",
+          "legendFormat": "Pressure"
+        }
+      ]
+    },
+    {
+      "title": "Zone Allocations",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 20 },
+      "fieldConfig": {
+        "defaults": {
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "expr": "spirit_memory_zone_allocations",
+          "legendFormat": "{{zone}} allocations"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["spiritros", "memory", "tensorfirst"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "SpiritROS — TensorFirst Memory Manager",
+  "uid": "spirit-memory-zones",
+  "version": 1
+}
