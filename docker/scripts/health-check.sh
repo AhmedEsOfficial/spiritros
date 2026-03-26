@@ -16,16 +16,13 @@ if ! curl -sf --max-time 5 http://localhost:11434/api/version > /dev/null 2>&1; 
     HEALTHY=false
 fi
 
-# Check Spirit Inference Coordinator (gRPC port)
-if command -v spirit-coordinator &> /dev/null; then
-    if ! curl -sf --max-time 5 http://localhost:50051/health > /dev/null 2>&1; then
-        # Fall back to checking if the process is alive
-        if [[ -f /var/run/spirit-coordinator.pid ]]; then
-            PID=$(cat /var/run/spirit-coordinator.pid)
-            if ! kill -0 "${PID}" 2>/dev/null; then
-                echo "UNHEALTHY: Spirit Coordinator (PID ${PID}) is not running"
-                HEALTHY=false
-            fi
+# Check Spirit Inference Coordinator
+if command -v spirit-infer &> /dev/null; then
+    if [[ -f /var/run/spirit-infer.pid ]]; then
+        PID=$(cat /var/run/spirit-infer.pid)
+        if ! kill -0 "${PID}" 2>/dev/null; then
+            echo "UNHEALTHY: Spirit Inference Coordinator (PID ${PID}) is not running"
+            HEALTHY=false
         fi
     fi
 fi

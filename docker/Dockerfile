@@ -47,6 +47,7 @@ RUN mkdir -p kernel/src \
          echo '//! stub' > "$d/src/lib.rs"; \
        done \
     && echo 'fn main() {}' > runtime/shell/src/main.rs \
+    && echo 'fn main() {}' > runtime/inference/src/main.rs \
     && echo 'fn main() {}' > runtime/security/src/main.rs \
     && echo 'fn main() {}' > runtime/spiritfs/src/main.rs \
     && echo 'fn main() {}' > benchmarks/src/main.rs \
@@ -65,6 +66,7 @@ COPY patches/ patches/
 # Build release binaries — enable fuse feature since libfuse3-dev is installed
 RUN cargo build --release --workspace --features spirit-spiritfs/fuse \
     && strip target/release/spirit-shell 2>/dev/null || true \
+    && strip target/release/spirit-infer 2>/dev/null || true \
     && strip target/release/spirit-guard 2>/dev/null || true \
     && strip target/release/spiritfs 2>/dev/null || true \
     && strip target/release/spirit-bench 2>/dev/null || true
@@ -104,6 +106,7 @@ RUN groupadd --gid 1000 spirit \
 
 # Copy binaries from builder
 COPY --from=builder /build/target/release/spirit-shell /opt/spiritros/bin/
+COPY --from=builder /build/target/release/spirit-infer /opt/spiritros/bin/
 COPY --from=builder /build/target/release/spirit-guard /opt/spiritros/bin/
 COPY --from=builder /build/target/release/spiritfs /opt/spiritros/bin/
 COPY --from=builder /build/target/release/spirit-bench /opt/spiritros/bin/

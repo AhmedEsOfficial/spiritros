@@ -38,8 +38,8 @@ cleanup() {
         fusermount3 -u /mnt/spiritfs 2>/dev/null || true
         kill "$(cat /var/run/spiritfs.pid)" 2>/dev/null || true
     fi
-    if [[ -f /var/run/spirit-coordinator.pid ]]; then
-        kill "$(cat /var/run/spirit-coordinator.pid)" 2>/dev/null || true
+    if [[ -f /var/run/spirit-infer.pid ]]; then
+        kill "$(cat /var/run/spirit-infer.pid)" 2>/dev/null || true
     fi
     if [[ -f /var/run/ollama.pid ]]; then
         kill "$(cat /var/run/ollama.pid)" 2>/dev/null || true
@@ -98,15 +98,15 @@ log "Ollama is ready (took ${OLLAMA_RETRIES}s)."
 # Step 4: Start Spirit Inference Coordinator
 # =============================================================================
 log "Starting Spirit Inference Coordinator..."
-if command -v spirit-coordinator &> /dev/null; then
-    spirit-coordinator \
+if command -v spirit-infer &> /dev/null; then
+    spirit-infer \
         --config "${CONFIG}" \
-        --ollama-url "http://localhost:11434" \
+        --log-level "${SPIRIT_LOG_LEVEL:-info}" \
         > "${LOG_DIR}/coordinator.log" 2>&1 &
-    echo $! > /var/run/spirit-coordinator.pid
-    log "Inference Coordinator started (PID $(cat /var/run/spirit-coordinator.pid))."
+    echo $! > /var/run/spirit-infer.pid
+    log "Inference Coordinator started (PID $(cat /var/run/spirit-infer.pid))."
 else
-    log "WARNING: spirit-coordinator not found, skipping."
+    log "WARNING: spirit-infer not found, skipping."
 fi
 
 # =============================================================================
