@@ -1,0 +1,12 @@
+[package]
+name = "spirit-kernel"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "SpiritKernel — hybrid microkernel for LLM-native inference (Phase 2+)"
+
+[dependencies]
+# No dependencies for Phase 1 stub — kernel runs on bare metal with #![no_std]
+
+[dev-dependencies]
+# Tests run in std mode via cfg_attr

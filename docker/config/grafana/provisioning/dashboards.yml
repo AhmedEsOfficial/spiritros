@@ -1,0 +1,19 @@
+# =============================================================================
+# SpiritROS Phase 1 — Grafana Dashboard Provisioning
+# =============================================================================
+# Auto-provisions dashboards from the specified directory on Grafana startup.
+
+apiVersion: 1
+
+providers:
+  - name: "SpiritROS Dashboards"
+    orgId: 1
+    folder: "SpiritROS"
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/dashboards
+      foldersFromFilesStructure: false

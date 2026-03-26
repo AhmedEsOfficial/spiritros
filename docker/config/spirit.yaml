@@ -1,0 +1,215 @@
+# =============================================================================
+# SpiritROS Phase 1 — Main Configuration
+# =============================================================================
+# This is the canonical configuration file for the SpiritROS runtime.
+# Environment variables override values here (prefixed with SPIRIT_).
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Memory Zones (cgroups v2 shim)
+# ---------------------------------------------------------------------------
+# PHASE1-SHIM: Replace with kernel-native TensorFirst memory zones in Phase 2.
+memory:
+  # Total memory budget (0 = auto-detect, use 90% of available)
+  total_budget_mb: 0
+
+  zones:
+    model:
+      # Memory reserved for model weights (read-only after load)
+      budget_percent: 40
+      # Enable hugepages for weight storage (reduces TLB misses)
+      hugepages: true
+      hugepage_size: "2M"
+      cgroup: "spirit-zone-model"
+
+    kv_cache:
+      # Memory reserved for KV-cache (inference state)
+      budget_percent: 30
+      # Enable COW semantics for cache snapshots
+      cow_enabled: true
+      # Maximum number of cached sessions before eviction
+      max_cached_sessions: 64
+      cgroup: "spirit-zone-kv"
+
+    tensor:
+      # Memory for intermediate computation tensors (scratch space)
+      budget_percent: 20
+      # Use arena allocation for zero-fragmentation
+      arena_allocator: true
+      cgroup: "spirit-zone-tensor"
+
+    general:
+      # Memory for everything else (OS, utilities, logging)
+      budget_percent: 10
+      cgroup: "spirit-zone-general"
+
+# ---------------------------------------------------------------------------
+# Inference Engine
+# ---------------------------------------------------------------------------
+inference:
+  # Backend configuration
+  backend: "ollama"
+  ollama:
+    url: "http://localhost:11434"
+    # Maximum concurrent inference sessions
+    max_sessions: 8
+    # Default model to load on startup
+    default_model: "llama3.2:3b"
+    # Request timeout (seconds)
+    timeout_secs: 300
+
+  # Coordinator settings
+  coordinator:
+    # gRPC listen address
+    listen_addr: "0.0.0.0:50051"
+    # Maximum queued requests before rejecting
+    max_queue_depth: 256
+    # Token streaming buffer size (pre-allocated, zero-alloc hot path)
+    token_buffer_size: 4096
+    # Use SCHED_FIFO for decode threads
+    realtime_scheduling: true
+    # Decode thread priority (1-99, higher = more priority)
+    realtime_priority: 80
+
+  # KV-cache management
+  kv_cache:
+    # Eviction policy: "lru", "lfu", or "size-aware"
+    eviction_policy: "lru"
+    # Maximum KV-cache size per session (MB, 0 = unlimited within zone)
+    max_per_session_mb: 0
+    # Enable snapshot/restore for session continuity
+    snapshots_enabled: true
+    snapshot_dir: "/var/lib/spiritros/data/kv-snapshots"
+
+  # GPU settings
+  gpu:
+    # Layer offloading: "auto", "full", or integer (number of layers)
+    offload: "auto"
+    # Enable CUDA MPS for multi-session GPU sharing
+    mps_enabled: true
+    # GPU memory fraction to reserve (0.0-1.0)
+    memory_fraction: 0.9
+
+# ---------------------------------------------------------------------------
+# Security (Spirit Guard)
+# ---------------------------------------------------------------------------
+security:
+  # Capability-based access control
+  capabilities:
+    enabled: true
+    # Default capabilities for new sessions
+    default_caps:
+      - "inference"
+      - "fs_read"
+    # Capabilities that require explicit grant
+    privileged_caps:
+      - "agentic"
+      - "gpu_compute"
+      - "fs_write"
+      - "network"
+      - "cap_delegate"
+
+  # API authentication
+  auth:
+    # Require API key for all endpoints
+    enabled: true
+    # API key source: "env" (SPIRIT_API_KEY), "file", or "etcd"
+    key_source: "env"
+
+  # Audit logging
+  audit:
+    enabled: true
+    log_path: "/var/log/spiritros/audit.log"
+    # Events to audit: "all", "security", "inference", "admin"
+    log_level: "security"
+
+  # Prompt injection detection
+  prompt_guard:
+    enabled: true
+    # Sensitivity: "low", "medium", "high"
+    sensitivity: "medium"
+
+# ---------------------------------------------------------------------------
+# Filesystem (SpiritFS)
+# ---------------------------------------------------------------------------
+filesystem:
+  # FUSE mount point
+  mountpoint: "/mnt/spiritfs"
+
+  # Backing store for file data
+  data_dir: "/var/lib/spiritros/data/spiritfs"
+
+  # Semantic search configuration
+  semantic:
+    enabled: true
+    # Embedding model (run through Ollama)
+    embedding_model: "nomic-embed-text"
+    # Vector database connection
+    qdrant_url: "http://qdrant:6334"
+    collection_name: "spiritfs_embeddings"
+    # Embedding dimensions
+    vector_size: 768
+    # Background indexing batch size
+    index_batch_size: 32
+
+  # POSIX compatibility
+  posix:
+    # Maximum file size (MB)
+    max_file_size_mb: 1024
+    # Enable extended attributes for metadata
+    xattr_enabled: true
+
+# ---------------------------------------------------------------------------
+# Networking
+# ---------------------------------------------------------------------------
+networking:
+  # REST API
+  rest:
+    listen_addr: "127.0.0.1:8080"
+    # Enable CORS for local development
+    cors_enabled: true
+    cors_origins:
+      - "http://localhost:3000"
+      - "http://localhost:8080"
+
+  # Metrics endpoint (Prometheus format)
+  metrics:
+    listen_addr: "0.0.0.0:9090"
+    path: "/metrics"
+
+  # Service discovery
+  etcd:
+    endpoints:
+      - "http://etcd:2379"
+    # Service registration prefix
+    prefix: "/spiritros/services"
+
+# ---------------------------------------------------------------------------
+# Shell (Spirit Shell)
+# ---------------------------------------------------------------------------
+shell:
+  # Default mode: "hybrid" (LLM + CLI), "cli" (traditional), "llm" (natural language only)
+  mode: "hybrid"
+
+  # LLM-powered features
+  llm:
+    # Model to use for shell intelligence
+    model: "llama3.2:3b"
+    # Maximum context window for shell sessions
+    max_context_tokens: 4096
+    # Enable command suggestion
+    suggest_commands: true
+    # Enable natural language file search via SpiritFS
+    semantic_search: true
+
+  # History
+  history:
+    enabled: true
+    max_entries: 10000
+    path: "/var/lib/spiritros/data/shell_history"
+
+  # Prompt customization
+  prompt:
+    format: "spirit:{cwd}> "
+    show_gpu_status: true
+    show_active_sessions: true

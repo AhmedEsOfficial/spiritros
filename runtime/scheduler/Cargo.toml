@@ -1,0 +1,18 @@
+[package]
+name = "spirit-scheduler"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Spirit Scheduler — inference-aware process scheduling via cpuset, nice, and SCHED_FIFO"
+
+[dependencies]
+tokio = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+nix = { workspace = true }
+serde = { workspace = true }
+libc = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+serde_json = { workspace = true }

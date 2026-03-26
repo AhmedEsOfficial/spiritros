@@ -1,0 +1,185 @@
+# SpiritROS Phase 1 — Production Docker Compose Stack
+# Usage: docker compose up -d
+
+services:
+  # ===========================================================================
+  # SpiritROS Core
+  # ===========================================================================
+  spiritros:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: spiritros
+    hostname: spiritros
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    ports:
+      - "11434:11434"   # Ollama API
+      - "50051:50051"   # Spirit Inference Coordinator (gRPC)
+      - "8080:8080"     # Spirit REST API
+    depends_on:
+      qdrant:
+        condition: service_healthy
+      etcd:
+        condition: service_healthy
+    volumes:
+      - spirit-models:/var/lib/spiritros/models
+      - spirit-data:/var/lib/spiritros/data
+      - spirit-logs:/var/log/spiritros
+    env_file:
+      - .env
+    environment:
+      - SPIRIT_QDRANT_URL=http://qdrant:6334
+      - SPIRIT_ETCD_ENDPOINTS=http://etcd:2379
+      - SPIRIT_PROMETHEUS_ENDPOINT=0.0.0.0:9090
+    cap_add:
+      - SYS_ADMIN     # Required for FUSE mounts and cgroups
+      - NET_ADMIN      # Required for network namespace management
+    devices:
+      - /dev/fuse:/dev/fuse
+    security_opt:
+      - seccomp:unconfined
+    healthcheck:
+      test: ["/opt/spiritros/scripts/health-check.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - spirit-net
+
+  # ===========================================================================
+  # Qdrant — Vector Database for SpiritFS Semantic Search
+  # ===========================================================================
+  qdrant:
+    image: qdrant/qdrant:v1.13.2
+    container_name: spiritros-qdrant
+    hostname: qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"    # REST API
+      - "6334:6334"    # gRPC API
+    volumes:
+      - qdrant-storage:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - spirit-net
+
+  # ===========================================================================
+  # etcd — Distributed Configuration & Service Discovery
+  # ===========================================================================
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.17
+    container_name: spiritros-etcd
+    hostname: etcd
+    restart: unless-stopped
+    ports:
+      - "2379:2379"    # Client API
+    volumes:
+      - etcd-data:/etcd-data
+    environment:
+      - ETCD_DATA_DIR=/etcd-data
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+      - ETCD_NAME=spiritros-etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health", "--endpoints=http://localhost:2379"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - spirit-net
+
+  # ===========================================================================
+  # Prometheus — Metrics Collection
+  # ===========================================================================
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    container_name: spiritros-prometheus
+    hostname: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.enable-lifecycle"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - spirit-net
+
+  # ===========================================================================
+  # Grafana — Metrics Visualization
+  # ===========================================================================
+  grafana:
+    image: grafana/grafana:11.5.2
+    container_name: spiritros-grafana
+    hostname: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-spiritros}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - spirit-net
+
+# =============================================================================
+# Named Volumes
+# =============================================================================
+volumes:
+  spirit-models:
+    name: spiritros-models
+  spirit-data:
+    name: spiritros-data
+  spirit-logs:
+    name: spiritros-logs
+  qdrant-storage:
+    name: spiritros-qdrant-storage
+  etcd-data:
+    name: spiritros-etcd-data
+  prometheus-data:
+    name: spiritros-prometheus-data
+  grafana-data:
+    name: spiritros-grafana-data
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  spirit-net:
+    name: spiritros-network
+    driver: bridge

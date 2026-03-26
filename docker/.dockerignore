@@ -1,0 +1,59 @@
+# Build artifacts
+target/
+*.o
+*.so
+*.dylib
+
+# Git
+.git/
+.gitignore
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Docker (avoid recursive context)
+docker/
+
+# Documentation (not needed in image)
+docs/
+*.md
+!runtime/**/README.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Environment files (secrets)
+.env
+.env.*
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Profiling data
+*.profraw
+perf.data
+flamegraph.svg
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Archive
+files.zip

@@ -1,0 +1,19 @@
+[package]
+name = "spirit-sdk"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Spirit Rust SDK — client library for interacting with SpiritROS services"
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tonic = { workspace = true }
+prost = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util", "macros"] }
+serde_json = { workspace = true }

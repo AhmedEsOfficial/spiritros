@@ -1,0 +1,52 @@
+# Rust
+target/
+**/*.rs.bk
+Cargo.lock
+!benchmarks/Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker/config/grafana/data/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Build artifacts
+*.o
+*.so
+*.dylib
+
+# Documentation build
+docs/book/
+
+# Benchmark data
+benchmarks/target/
+
+# Model files (large)
+*.gguf
+*.safetensors
+*.bin
+models/
+
+# Logs
+*.log
+/logs/
+
+# Coverage
+*.profraw
+lcov.info
+coverage/

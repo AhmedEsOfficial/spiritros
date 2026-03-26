@@ -1,0 +1,37 @@
+# SpiritROS Phase 1 — Development Compose Overrides
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+services:
+  spiritros:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    container_name: spiritros-dev
+    volumes:
+      - ..:/workspace:cached
+      - spirit-models:/var/lib/spiritros/models
+      - spirit-data:/var/lib/spiritros/data
+      - spirit-logs:/var/log/spiritros
+      - cargo-cache:/root/.cargo/registry
+      - cargo-git:/root/.cargo/git
+      - target-cache:/workspace/target
+    ports:
+      - "11434:11434"
+      - "50051:50051"
+      - "8080:8080"
+      - "9090:9090"
+      - "6060:6060"     # tokio-console
+    environment:
+      - RUST_BACKTRACE=1
+      - RUST_LOG=debug
+      - SPIRIT_DEV_MODE=true
+    stdin_open: true
+    tty: true
+
+volumes:
+  cargo-cache:
+    name: spiritros-cargo-cache
+  cargo-git:
+    name: spiritros-cargo-git
+  target-cache:
+    name: spiritros-target-cache

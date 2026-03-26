@@ -1,0 +1,29 @@
+[package]
+name = "spirit-spiritfs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "SpiritFS — Semantic FUSE filesystem with content-addressable storage and embedding-based search"
+
+[features]
+default = []
+fuse = ["dep:fuser"]
+
+[dependencies]
+tokio = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+fuser = { workspace = true, optional = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+libc = { workspace = true }
+uuid = { workspace = true }
+
+[[bin]]
+name = "spiritfs"
+path = "src/main.rs"
+required-features = ["fuse"]
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+serde_json = { workspace = true }

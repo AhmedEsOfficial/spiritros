@@ -1,0 +1,21 @@
+[package]
+name = "spirit-networking"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Spirit Networking — HTTP/gRPC API layer, mesh coordination, and authenticated endpoints"
+
+[dependencies]
+tokio = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+hyper = { workspace = true }
+hyper-util = { workspace = true }
+tower = { workspace = true }
+tonic = { workspace = true }
+prost = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

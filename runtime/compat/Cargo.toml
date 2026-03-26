@@ -1,0 +1,18 @@
+[package]
+name = "spirit-compat"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Compatibility Layers — Linux syscall interception for running unmodified binaries on SpiritROS"
+
+[dependencies]
+tokio = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+nix = { workspace = true }
+serde = { workspace = true }
+libc = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+serde_json = { workspace = true }

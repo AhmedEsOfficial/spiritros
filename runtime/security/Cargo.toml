@@ -1,0 +1,21 @@
+[package]
+name = "spirit-security"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Spirit Guard — capability-based security, audit logging, and access control"
+
+[dependencies]
+tokio = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+uuid = { workspace = true }
+
+[[bin]]
+name = "spirit-guard"
+path = "src/main.rs"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+serde_json = { workspace = true }
