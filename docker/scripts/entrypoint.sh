@@ -156,5 +156,15 @@ fi
 # Step 8: Execute CMD
 # =============================================================================
 log "SpiritROS Phase 1 initialization complete."
+
+# If no TTY is attached and CMD is spirit-shell, keep the container alive
+# with the background services instead of launching an interactive shell.
+if [ "$1" = "spirit-shell" ] && [ ! -t 0 ]; then
+    log "No TTY detected — running in daemon mode (services only)."
+    log "Attach interactively with: docker exec -it spiritros spirit-shell"
+    # Wait forever, letting the trap handler clean up on SIGTERM
+    exec sleep infinity
+fi
+
 log "Executing: $*"
 exec "$@"

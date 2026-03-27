@@ -12,17 +12,16 @@ services:
     container_name: spiritros
     hostname: spiritros
     restart: unless-stopped
-    # GPU passthrough — uncomment the deploy block if nvidia-container-toolkit is installed.
-    # Without it, SpiritROS runs in CPU-only mode (entrypoint.sh detects this automatically).
-    # To install: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
-    #
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
+    # GPU passthrough — requires nvidia-container-toolkit.
+    # Comment out the deploy block to run in CPU-only mode.
+    # Install: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     ports:
       - "11436:11434"   # Ollama API
       - "50051:50051"   # Spirit Inference Coordinator (gRPC)
