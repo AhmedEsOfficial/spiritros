@@ -91,6 +91,48 @@ inference:
     memory_fraction: 0.9
 
 # ---------------------------------------------------------------------------
+# Scheduler (Inference-Aware Process Scheduling)
+# ---------------------------------------------------------------------------
+# PHASE1-SHIM: Replace with kernel-native scheduler in Phase 2.
+scheduler:
+  # Fraction of total CPU cores dedicated to inference (0.0-1.0)
+  inference_core_ratio: 0.75
+
+  # SCHED_FIFO priority for P0 (InferenceCritical) threads (1-99)
+  p0_fifo_priority: 99
+
+  # SCHED_FIFO priority for P1 (InferenceBatch) threads (1-99)
+  p1_fifo_priority: 50
+
+  # Nice values for non-realtime tiers
+  p2_nice: -10    # SystemServices
+  p3_nice: 0      # Compatibility
+  p4_nice: 19     # IdleMaintenance
+
+  # GPU exclusive compute mode during inference
+  gpu_exclusive_mode: true
+
+  # Minimum cores reserved for system services (never given to inference)
+  reserved_system_cores: 1
+
+  # Watchdog: prevent SCHED_FIFO thread starvation
+  watchdog_enabled: true
+  watchdog_timeout_ms: 5000
+
+  # cgroup v2 settings
+  cgroup_root: "/sys/fs/cgroup"
+  cgroup_name: "spirit"
+
+  # IPC socket for phase hints from inference coordinator
+  socket_path: "/run/spirit/scheduler.sock"
+
+  # Attempt SCHED_FIFO (requires CAP_SYS_NICE capability)
+  enable_realtime: true
+
+  # Pin inference cores to GPU's NUMA node
+  numa_aware: true
+
+# ---------------------------------------------------------------------------
 # Security (Spirit Guard)
 # ---------------------------------------------------------------------------
 security:

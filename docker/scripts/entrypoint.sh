@@ -7,12 +7,13 @@ set -euo pipefail
 # Initializes the SpiritROS runtime environment:
 #   1. Detect GPU capabilities
 #   2. Set up cgroups v2 memory zones
-#   3. Start Ollama inference backend
-#   4. Start Spirit Inference Coordinator
-#   5. Mount SpiritFS (FUSE)
-#   6. Start Spirit Guard (security)
-#   7. Pull default model if not present
-#   8. Execute CMD
+#   3. Start Spirit Scheduler (inference-aware CPU/GPU scheduling)
+#   4. Start Ollama inference backend
+#   5. Start Spirit Inference Coordinator
+#   6. Mount SpiritFS (FUSE)
+#   7. Start Spirit Guard (security)
+#   8. Pull default model if not present
+#   9. Execute CMD
 # =============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -40,6 +41,9 @@ cleanup() {
     fi
     if [[ -f /var/run/spirit-infer.pid ]]; then
         kill "$(cat /var/run/spirit-infer.pid)" 2>/dev/null || true
+    fi
+    if [[ -f /var/run/spirit-scheduler.pid ]]; then
+        kill "$(cat /var/run/spirit-scheduler.pid)" 2>/dev/null || true
     fi
     if [[ -f /var/run/ollama.pid ]]; then
         kill "$(cat /var/run/ollama.pid)" 2>/dev/null || true
@@ -75,7 +79,23 @@ else
 fi
 
 # =============================================================================
-# Step 3: Start Ollama
+# Step 3: Start Spirit Scheduler
+# =============================================================================
+log "Starting Spirit Scheduler..."
+if command -v spirit-scheduler &> /dev/null; then
+    mkdir -p /run/spirit
+    spirit-scheduler \
+        --config "${CONFIG}" \
+        --log-level "${SPIRIT_LOG_LEVEL:-info}" \
+        > "${LOG_DIR}/scheduler.log" 2>&1 &
+    echo $! > /var/run/spirit-scheduler.pid
+    log "Spirit Scheduler started (PID $(cat /var/run/spirit-scheduler.pid))."
+else
+    log "WARNING: spirit-scheduler not found, skipping."
+fi
+
+# =============================================================================
+# Step 4: Start Ollama
 # =============================================================================
 log "Starting Ollama inference backend..."
 ollama serve > "${LOG_DIR}/ollama.log" 2>&1 &
@@ -95,7 +115,7 @@ done
 log "Ollama is ready (took ${OLLAMA_RETRIES}s)."
 
 # =============================================================================
-# Step 4: Start Spirit Inference Coordinator
+# Step 5: Start Spirit Inference Coordinator
 # =============================================================================
 log "Starting Spirit Inference Coordinator..."
 if command -v spirit-infer &> /dev/null; then
@@ -110,7 +130,7 @@ else
 fi
 
 # =============================================================================
-# Step 5: Mount SpiritFS (FUSE)
+# Step 6: Mount SpiritFS (FUSE)
 # =============================================================================
 log "Mounting SpiritFS at /mnt/spiritfs..."
 if command -v spiritfs &> /dev/null; then
@@ -125,7 +145,7 @@ else
 fi
 
 # =============================================================================
-# Step 6: Start Spirit Guard (Security)
+# Step 7: Start Spirit Guard (Security)
 # =============================================================================
 log "Starting Spirit Guard..."
 if command -v spirit-guard &> /dev/null; then
@@ -139,7 +159,7 @@ else
 fi
 
 # =============================================================================
-# Step 7: Pull default model if not already present
+# Step 8: Pull default model if not already present
 # =============================================================================
 DEFAULT_MODEL="${SPIRIT_DEFAULT_MODEL:-llama3.2:3b}"
 log "Ensuring default model '${DEFAULT_MODEL}' is available..."
@@ -153,7 +173,7 @@ else
 fi
 
 # =============================================================================
-# Step 8: Execute CMD
+# Step 9: Execute CMD
 # =============================================================================
 log "SpiritROS Phase 1 initialization complete."
 

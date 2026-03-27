@@ -23,8 +23,8 @@ docker compose -f docker/docker-compose.yml exec spiritros bash
 
 # Inside the container:
 ollama list                          # Should show models (or empty list)
-ollama pull llama3.2:3b              # Pull a small model
-ollama run llama3.2:3b "Hello"       # Test generation
+ollama pull qwen3.5:4b              # Pull a small model
+ollama run qwen3.5:4b "Hello"       # Test generation
 Verify spirit-infer is running
 
 # Inside the container:

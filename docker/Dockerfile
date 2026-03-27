@@ -65,14 +65,14 @@ COPY patches/ patches/
 
 # Build release binaries — enable fuse feature since libfuse3-dev is installed
 RUN cargo build --release --workspace --features spirit-spiritfs/fuse \
-    && for bin in spirit-shell spirit-infer spirit-guard spiritfs spirit-bench; do \
+    && for bin in spirit-shell spirit-infer spirit-guard spirit-scheduler spiritfs spirit-bench; do \
          strip "target/release/$bin" 2>/dev/null || true; \
        done
 
 # Stage binaries into a single directory so COPY in the runtime stage doesn't
 # fail when an optional binary (e.g. spiritfs) wasn't produced.
 RUN mkdir -p /build/dist \
-    && for bin in spirit-shell spirit-infer spirit-guard spiritfs spirit-bench; do \
+    && for bin in spirit-shell spirit-infer spirit-guard spirit-scheduler spiritfs spirit-bench; do \
          cp "target/release/$bin" /build/dist/ 2>/dev/null || true; \
        done
 

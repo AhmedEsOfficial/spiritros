@@ -3,15 +3,26 @@ name = "spirit-scheduler"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Spirit Scheduler — inference-aware process scheduling via cpuset, nice, and SCHED_FIFO"
+description = "Spirit Scheduler — inference-aware process scheduling via cpuset, SCHED_FIFO, and GPU management"
+
+[[bin]]
+name = "spirit-scheduler"
+path = "src/main.rs"
 
 [dependencies]
 tokio = { workspace = true }
 tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 thiserror = { workspace = true }
+anyhow = { workspace = true }
 nix = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = "0.9"
 libc = { workspace = true }
+clap = { workspace = true }
+figment = { workspace = true }
+prometheus-client = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] }
