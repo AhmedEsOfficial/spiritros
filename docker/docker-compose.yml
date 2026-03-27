@@ -12,6 +12,8 @@ services:
     container_name: spiritros
     hostname: spiritros
     restart: unless-stopped
+    stdin_open: true        # Required for interactive spirit-shell
+    tty: true               # Required for spirit-shell terminal features
     # GPU passthrough — requires nvidia-container-toolkit.
     # Comment out the deploy block to run in CPU-only mode.
     # Install: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
@@ -52,6 +54,8 @@ services:
       - SPIRITFS_EMBEDDING_MODEL=nomic-embed-text
       - SPIRITFS_EMBEDDING_DIMENSIONS=768
       - SPIRITFS_METRICS_BIND=0.0.0.0:9104
+      # Shell configuration — model/URL resolved from .env at runtime
+      - SPIRIT_OLLAMA_URL=http://127.0.0.1:11434
     cap_add:
       - SYS_ADMIN     # Required for FUSE mounts and cgroups
       - NET_ADMIN      # Required for network namespace management

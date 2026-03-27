@@ -15,6 +15,7 @@
 - [Scheduler](architecture/scheduler.md)
 - [Inference Engine](architecture/inference.md)
 - [Semantic Filesystem](architecture/filesystem.md)
+- [Spirit Shell](architecture/shell.md)
 - [Security Model](architecture/security.md)
 
 # Developer Guide

@@ -2,7 +2,9 @@
 # SpiritROS Phase 1 — Main Configuration
 # =============================================================================
 # This is the canonical configuration file for the SpiritROS runtime.
-# Environment variables override values here (prefixed with SPIRIT_).
+# Environment variables override values here. Use docker/.env for deployment
+# settings (model names, URLs, credentials) and this file for structural
+# configuration that rarely changes.
 # =============================================================================
 
 # ---------------------------------------------------------------------------
@@ -46,15 +48,17 @@ memory:
 # ---------------------------------------------------------------------------
 # Inference Engine
 # ---------------------------------------------------------------------------
+# Model name and Ollama URL are set via env vars (SPIRIT_DEFAULT_MODEL,
+# OLLAMA_HOST) in .env — not duplicated here.
 inference:
   # Backend configuration
   backend: "ollama"
   ollama:
-    url: "http://localhost:11434"
+    # Overridden by SPIRIT_INFERENCE_OLLAMA__URL or falls back to OLLAMA_HOST
+    # url: resolved from OLLAMA_HOST env var at runtime
     # Maximum concurrent inference sessions
     max_sessions: 8
-    # Default model to load on startup
-    default_model: "llama3.2:3b"
+    # default_model: resolved from SPIRIT_DEFAULT_MODEL env var at runtime
     # Request timeout (seconds)
     timeout_secs: 300
 
@@ -87,7 +91,7 @@ inference:
     offload: "auto"
     # Enable CUDA MPS for multi-session GPU sharing
     mps_enabled: true
-    # GPU memory fraction to reserve (0.0-1.0)
+    # Overridden by SPIRIT_GPU_MEMORY_FRACTION env var
     memory_fraction: 0.9
 
 # ---------------------------------------------------------------------------
@@ -232,14 +236,17 @@ networking:
 # ---------------------------------------------------------------------------
 # Shell (Spirit Shell)
 # ---------------------------------------------------------------------------
+# Model and Ollama URL are read from env vars at runtime:
+#   SPIRIT_SHELL_MODEL  or  SPIRIT_DEFAULT_MODEL  → llm.model
+#   OLLAMA_HOST                                    → inference.ollama_url
+# Only structural/UX settings belong here.
 shell:
-  # Default mode: "hybrid" (LLM + CLI), "cli" (traditional), "llm" (natural language only)
+  # Default mode: "hybrid" (LLM + CLI), "cli" (traditional), "llm" (NL only)
   mode: "hybrid"
 
   # LLM-powered features
   llm:
-    # Model to use for shell intelligence
-    model: "llama3.2:3b"
+    # model: resolved at runtime from SPIRIT_SHELL_MODEL or SPIRIT_DEFAULT_MODEL
     # Maximum context window for shell sessions
     max_context_tokens: 4096
     # Enable command suggestion
@@ -258,3 +265,16 @@ shell:
     format: "spirit:{cwd}> "
     show_gpu_status: true
     show_active_sessions: true
+    show_model: true
+
+  # Inference endpoint
+  # ollama_url: resolved from SPIRIT_OLLAMA_URL or OLLAMA_HOST env var at runtime
+  inference:
+    timeout_secs: 300
+
+  # Command aliases
+  aliases:
+    ll: "ls -la"
+    models: "spirit model list"
+    mem: "spirit mem status"
+    sched: "spirit sched status"

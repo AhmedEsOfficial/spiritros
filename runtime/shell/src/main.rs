@@ -1,6 +1,19 @@
 //! Spirit Shell — the main interactive entrypoint for `SpiritROS` Phase 1.
+//!
+//! The Spirit Shell is `SpiritROS`'s primary user interface — a command-line
+//! environment where natural language and traditional Unix commands coexist.
+//! A user can type `ls -la`, a standard Unix command, or "What models do I
+//! have loaded?", a natural language query — and the shell handles both.
 
 #![warn(clippy::all, clippy::pedantic)]
+#![allow(
+    clippy::module_name_repetitions,
+    clippy::missing_errors_doc,
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::similar_names,
+    clippy::must_use_candidate
+)]
 
 use std::path::PathBuf;
 
@@ -10,29 +23,45 @@ use reedline::{
     default_emacs_keybindings, ColumnarMenu, DefaultHinter, Emacs, FileBackedHistory, KeyCode,
     KeyModifiers, MenuBuilder, Reedline, ReedlineEvent, ReedlineMenu, Signal,
 };
-use tracing::info;
+use tracing::{info, warn};
 
-use spirit_shell::commands::CommandRegistry;
+use spirit_shell::commands::{self, SharedState};
 use spirit_shell::completer::SpiritCompleter;
-use spirit_shell::config::ShellMode;
+use spirit_shell::config::ShellConfig;
+use spirit_shell::highlighter::SpiritHighlighter;
+use spirit_shell::pipe;
 use spirit_shell::prompt::SpiritPrompt;
-use spirit_shell::types::CommandResult;
+use spirit_shell::resolver::CommandResolver;
+use spirit_shell::types::{CommandResult, Resolution};
+use spirit_shell::unix;
 
 /// Spirit Shell — LLM-native command interface for `SpiritROS`.
 #[derive(Parser, Debug)]
 #[command(name = "spirit-shell", version, about)]
 struct Cli {
-    /// Path to a shell configuration file (JSON).
+    /// Path to a shell configuration file (YAML).
     #[arg(long, value_name = "FILE")]
     config: Option<PathBuf>,
 
     /// Shell operating mode.
-    #[arg(long, default_value = "hybrid")]
-    mode: String,
+    #[arg(long)]
+    mode: Option<String>,
+
+    /// Ollama API URL override.
+    #[arg(long, env = "OLLAMA_HOST")]
+    ollama_url: Option<String>,
+
+    /// Model to use for inference.
+    #[arg(long)]
+    model: Option<String>,
 
     /// Enable verbose (debug-level) logging.
     #[arg(long)]
     verbose: bool,
+
+    /// Execute a single command and exit (non-interactive).
+    #[arg(short = 'c')]
+    command: Option<String>,
 }
 
 const BANNER: &str = r"
@@ -61,41 +90,84 @@ fn main() -> Result<()> {
         .with_target(false)
         .init();
 
-    let mode: ShellMode = cli
-        .mode
-        .parse()
-        .map_err(|e: String| anyhow::anyhow!(e))
-        .context("Invalid --mode value")?;
+    // Load configuration
+    let mut config = if let Some(ref path) = cli.config {
+        ShellConfig::from_file(path).map_err(|e| anyhow::anyhow!("Failed to load config: {e}"))?
+    } else {
+        ShellConfig::load()
+    };
 
-    info!(mode = %mode, "Starting Spirit Shell");
+    // Apply CLI overrides
+    if let Some(ref mode_str) = cli.mode {
+        config.mode = mode_str
+            .parse()
+            .map_err(|e: String| anyhow::anyhow!(e))
+            .context("Invalid --mode value")?;
+    }
+    if let Some(ref url) = cli.ollama_url {
+        let url = if url.starts_with("http") {
+            url.clone()
+        } else {
+            format!("http://{url}")
+        };
+        config.inference.ollama_url = url;
+    }
+    if let Some(ref model) = cli.model {
+        config.llm.model.clone_from(model);
+    }
 
+    info!(mode = %config.mode, model = %config.llm.model, "Starting Spirit Shell");
+
+    // Non-interactive mode: execute a single command
+    if let Some(ref cmd) = cli.command {
+        return run_command(&config, cmd);
+    }
+
+    // Interactive mode
     println!("{BANNER}");
-    println!("  Mode: {mode}\n");
+    println!("  Mode: {}  |  Model: {}", config.mode, config.llm.model);
+    println!("  Type 'help' for commands, '?' prefix for natural language\n");
 
-    run_repl(mode)
+    run_repl(config)
+}
+
+/// Run a single command non-interactively.
+fn run_command(config: &ShellConfig, cmd: &str) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    let state = commands::new_state(config.clone());
+
+    rt.block_on(async {
+        let resolver = CommandResolver::new(config.aliases.clone(), config.mode);
+        let resolution = resolver.resolve(cmd);
+        handle_resolution(&state, resolution).await;
+    });
+
+    Ok(())
 }
 
 /// Run the interactive read-eval-print loop.
-fn run_repl(mode: ShellMode) -> Result<()> {
-    let registry = CommandRegistry::new();
+#[allow(clippy::needless_pass_by_value)]
+fn run_repl(config: ShellConfig) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    let state = commands::new_state(config.clone());
 
     // ── History ──────────────────────────────────────────────────────────
-    let history_path = history_path();
+    let history_path = config.history.path.clone();
     if let Some(parent) = history_path.parent() {
         std::fs::create_dir_all(parent)
             .with_context(|| format!("Failed to create history dir: {}", parent.display()))?;
     }
     let history = Box::new(
-        FileBackedHistory::with_file(500, history_path.clone())
+        FileBackedHistory::with_file(config.history.max_entries, history_path.clone())
             .context("Failed to open history file")?,
     );
 
     // ── Completer ────────────────────────────────────────────────────────
-    let mut names = registry.command_names();
-    names.push("quit"); // alias
-    let completer = Box::new(SpiritCompleter::new(names));
-
+    let completer = Box::new(SpiritCompleter::new());
     let completion_menu = Box::new(ColumnarMenu::default().with_name("completion_menu"));
+
+    // ── Highlighter ──────────────────────────────────────────────────────
+    let highlighter = Box::new(SpiritHighlighter);
 
     // ── Keybindings ──────────────────────────────────────────────────────
     let mut keybindings = default_emacs_keybindings();
@@ -118,38 +190,42 @@ fn run_repl(mode: ShellMode) -> Result<()> {
         .with_completer(completer)
         .with_menu(ReedlineMenu::EngineCompleter(completion_menu))
         .with_edit_mode(edit_mode)
-        .with_hinter(hinter);
+        .with_hinter(hinter)
+        .with_highlighter(highlighter);
 
-    let prompt = SpiritPrompt;
+    let mut prompt = SpiritPrompt::new();
 
     // ── REPL ─────────────────────────────────────────────────────────────
     loop {
+        // Update prompt with current state
+        {
+            let state_guard = rt.block_on(state.read());
+            prompt.update_from_state(&state_guard);
+        }
+
         match line_editor.read_line(&prompt) {
             Ok(Signal::Success(line)) => {
-                let result = dispatch_input(&registry, mode, &line);
-                match result {
-                    CommandResult::Output(text) => {
-                        if !text.is_empty() {
-                            println!("{text}");
-                        }
-                    }
-                    CommandResult::Clear => {
-                        // ANSI escape: clear screen and move cursor to top-left
-                        print!("\x1b[2J\x1b[H");
-                    }
-                    CommandResult::Exit => {
-                        println!("Goodbye.");
-                        break;
-                    }
-                    CommandResult::NotBuiltin => {
-                        // PHASE1-SHIM: In later phases this routes to the inference engine.
-                        println!("[stub] Command will be routed to inference engine in Phase 06");
-                    }
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    continue;
                 }
+
+                // Resolve the input
+                let resolution = {
+                    let state_guard = rt.block_on(state.read());
+                    state_guard.resolver.resolve(trimmed)
+                };
+
+                // Handle the resolution (may involve async operations)
+                rt.block_on(handle_resolution(&state, resolution));
             }
-            Ok(Signal::CtrlD | Signal::CtrlC) => {
+            Ok(Signal::CtrlD) => {
                 println!("\nGoodbye.");
                 break;
+            }
+            Ok(Signal::CtrlC) => {
+                // Ctrl+C cancels the current line, doesn't exit
+                println!();
             }
             Err(err) => {
                 eprintln!("Error reading input: {err}");
@@ -161,38 +237,89 @@ fn run_repl(mode: ShellMode) -> Result<()> {
     Ok(())
 }
 
-/// Route input through the command registry, respecting the current [`ShellMode`].
-fn dispatch_input(registry: &CommandRegistry, mode: ShellMode, line: &str) -> CommandResult {
-    match mode {
-        ShellMode::Hybrid => {
-            // In Hybrid mode, if the command is not built-in, we would route to
-            // the inference engine. For now the caller handles `NotBuiltin`.
-            registry.dispatch(line)
+/// Handle a resolved command.
+async fn handle_resolution(state: &SharedState, resolution: Resolution) {
+    match resolution {
+        Resolution::SpiritBuiltin(line) => {
+            let result = commands::dispatch_builtin(state, &line).await;
+            print_result(result);
         }
-        ShellMode::Cli => {
-            let result = registry.dispatch(line);
-            if matches!(result, CommandResult::NotBuiltin) {
-                let cmd = line.split_whitespace().next().unwrap_or("");
-                return CommandResult::Output(format!(
-                    "Unknown command: '{cmd}'. Type 'help' for available commands."
-                ));
+
+        Resolution::UnixCommand(cmd) => match unix::exec_interactive(&cmd).await {
+            Ok(code) => {
+                if code != 0 {
+                    eprintln!("\x1b[2m(exit code: {code})\x1b[0m");
+                }
             }
-            result
+            Err(e) => {
+                eprintln!("\x1b[31mError:\x1b[0m {e}");
+            }
+        },
+
+        Resolution::NaturalLanguage(query) => {
+            let client = state.read().await.inference.clone();
+            match client.query(&query).await {
+                Ok(_stats) => {}
+                Err(e) => {
+                    eprintln!("\x1b[31mInference error:\x1b[0m {e}");
+                    eprintln!(
+                        "\x1b[2mCheck that Ollama is running at: {}\x1b[0m",
+                        state.read().await.config.inference.ollama_url
+                    );
+                }
+            }
         }
-        ShellMode::Llm => {
-            // In LLM mode, still honour exit/quit so the user can leave.
-            let trimmed = line.trim();
-            if trimmed == "exit" || trimmed == "quit" {
-                return CommandResult::Exit;
+
+        Resolution::PipeToLlm { command, query } => {
+            let client = state.read().await.inference.clone();
+            match pipe::exec_pipe_to_llm(&client, &command, &query).await {
+                Ok(()) => {}
+                Err(e) => {
+                    eprintln!("\x1b[31mPipe-to-LLM error:\x1b[0m {e}");
+                }
             }
-            // Everything else goes to inference.
-            CommandResult::NotBuiltin
+        }
+
+        Resolution::Alias(expanded) => {
+            // Re-resolve the expanded alias
+            let resolution = {
+                let state_guard = state.read().await;
+                state_guard.resolver.resolve(&expanded)
+            };
+            // Prevent infinite alias loops by not re-expanding aliases
+            match resolution {
+                Resolution::Alias(_) => {
+                    eprintln!("\x1b[31mError:\x1b[0m Alias loop detected");
+                }
+                other => {
+                    Box::pin(handle_resolution(state, other)).await;
+                }
+            }
         }
     }
 }
 
-/// Resolve the history file path (`~/.spirit/history.txt`).
-fn history_path() -> PathBuf {
-    let home = std::env::var("HOME").map_or_else(|_| PathBuf::from("/tmp"), PathBuf::from);
-    home.join(".spirit").join("history.txt")
+/// Print a command result to stdout/stderr.
+fn print_result(result: CommandResult) {
+    match result {
+        CommandResult::Output(text) => {
+            if !text.is_empty() {
+                println!("{text}");
+            }
+        }
+        CommandResult::Clear => {
+            print!("\x1b[2J\x1b[H");
+        }
+        CommandResult::Exit => {
+            println!("Goodbye.");
+            std::process::exit(0);
+        }
+        CommandResult::NotBuiltin => {
+            // This shouldn't happen with proper resolution, but handle gracefully
+            eprintln!("[internal] Unresolved command — report this as a bug");
+        }
+        CommandResult::Error(msg) => {
+            eprintln!("\x1b[31mError:\x1b[0m {msg}");
+        }
+    }
 }
