@@ -45,3 +45,46 @@ entrypoint.sh — now starts spirit-infer (not spirit-coordinator)
 health-check.sh — now checks spirit-infer PID
 What requires a running container to verify
 The checked acceptance criteria are code-complete — the Rust implementation handles all the logic. But the end-to-end flow (Ollama starts -> spirit-infer syncs models -> registry populated) can only be verified with the container running and a GPU (or CPU fallback) available. You can't unit-test "Ollama actually starts" without Docker.
+
+# restart
+docker compose -f docker/docker-compose.yml down && just docker-up
+
+
+
+
+# Backing up
+
+What's already persistent (you don't need to do anything)
+Build cache — Docker BuildKit stores layer caches automatically. They survive down, up, build, etc. They only get deleted if you explicitly run docker builder prune.
+Named volumes (spiritros-models, spiritros-data, etc.) — survive down. Only deleted by docker volume rm or docker compose down -v (the -v flag).
+Pulled images (qdrant, etcd, prometheus, grafana, nvidia/cuda, rust) — survive everything. Only deleted by docker image prune or docker rmi.
+What WILL delete your cache (avoid these)
+Command	What it deletes
+docker builder prune	Build layer cache (the big one)
+docker system prune	Stopped containers, dangling images, build cache
+docker compose down -v	Named volumes (model data, logs)
+docker image prune -a	All unused images
+To explicitly back up the built image
+
+# Save the compiled image to a tarball (~2-3 GB)
+docker save docker-spiritros:latest | zstd -o spiritros-image.tar.zst
+
+# Restore later
+zstd -d spiritros-image.tar.zst --stdout | docker load
+To pin the build cache permanently
+Add this to a ~/.docker/daemon.json (or create it):
+
+
+{
+  "builder": {
+    "gc": {
+      "enabled": false
+    }
+  }
+}
+This disables automatic garbage collection of the build cache. Restart Docker after: sudo systemctl restart docker.
+
+Now go ahead and bring it up:
+
+
+docker compose -f docker/docker-compose.yml down && just docker-up
