@@ -49,6 +49,22 @@ docker-shell:
 docker-logs:
     docker compose -f docker/docker-compose.yml logs -f spiritros
 
+# Build SpiritFS with FUSE support
+spiritfs-build:
+    cargo build -p spirit-spiritfs --features fuse
+
+# Test SpiritFS
+spiritfs-test:
+    cargo test -p spirit-spiritfs
+
+# Lint SpiritFS
+spiritfs-lint:
+    cargo clippy -p spirit-spiritfs -- -D warnings
+
+# Docker SpiritFS logs
+docker-spiritfs-logs:
+    docker compose -f docker/docker-compose.yml exec spiritros cat /var/log/spiritros/spiritfs.log
+
 # Run benchmarks
 bench:
     cargo run --release -p spirit-bench

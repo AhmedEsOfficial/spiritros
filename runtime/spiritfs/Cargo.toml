@@ -10,14 +10,63 @@ default = []
 fuse = ["dep:fuser"]
 
 [dependencies]
+# Async runtime
 tokio = { workspace = true }
-tracing = { workspace = true }
+tokio-stream = "0.1"
+futures = "0.3"
+async-trait = "0.1"
+
+# Error handling
 thiserror = { workspace = true }
-fuser = { workspace = true, optional = true }
+anyhow = { workspace = true }
+
+# Logging / tracing
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
+
+# CLI
+clap = { workspace = true }
+
+# FUSE (feature-gated — requires libfuse3-dev)
+fuser = { workspace = true, optional = true }
+
+# System interfaces
 libc = { workspace = true }
+nix = { workspace = true }
+
+# Identity
 uuid = { workspace = true }
+chrono = { workspace = true }
+
+# Configuration
+figment = { workspace = true }
+
+# Metrics
+prometheus-client = { workspace = true }
+
+# HTTP client (for Ollama embedding API)
+reqwest = { workspace = true, features = ["stream"] }
+
+# Hashing (CAS)
+sha2 = "0.10"
+hex = "0.4"
+
+# SQLite (metadata + FTS5)
+rusqlite = { version = "0.32", features = ["bundled", "backup"] }
+
+# Qdrant vector store
+qdrant-client = "1.12"
+
+# File watching
+notify = "8.0"
+
+# Concurrency
+parking_lot = "0.12"
+crossbeam-channel = "0.5"
 
 [[bin]]
 name = "spiritfs"
@@ -25,5 +74,6 @@ path = "src/main.rs"
 required-features = ["fuse"]
 
 [dev-dependencies]
-tokio = { workspace = true, features = ["test-util"] }
+tokio = { workspace = true, features = ["test-util", "macros", "rt-multi-thread"] }
 serde_json = { workspace = true }
+tempfile = "3.14"

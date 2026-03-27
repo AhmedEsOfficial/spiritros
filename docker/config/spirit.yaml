@@ -174,6 +174,9 @@ security:
 # ---------------------------------------------------------------------------
 # Filesystem (SpiritFS)
 # ---------------------------------------------------------------------------
+# SpiritFS uses its own figment config via SPIRITFS_* env vars (see below).
+# This section documents the settings; actual values are set via env vars
+# in docker-compose.yml to match the SpiritFsConfig struct.
 filesystem:
   # FUSE mount point
   mountpoint: "/mnt/spiritfs"
@@ -188,7 +191,7 @@ filesystem:
     embedding_model: "nomic-embed-text"
     # Vector database connection
     qdrant_url: "http://qdrant:6334"
-    collection_name: "spiritfs_embeddings"
+    collection_name: "spiritfs"
     # Embedding dimensions
     vector_size: 768
     # Background indexing batch size

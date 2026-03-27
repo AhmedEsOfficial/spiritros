@@ -134,9 +134,14 @@ fi
 # =============================================================================
 log "Mounting SpiritFS at /mnt/spiritfs..."
 if command -v spiritfs &> /dev/null; then
-    spiritfs \
-        --config "${CONFIG}" \
-        --mountpoint /mnt/spiritfs \
+    # Ensure backing and CAS directories exist
+    mkdir -p /var/lib/spiritros/data/spiritfs
+    mkdir -p /var/lib/spiritros/cas
+    mkdir -p /mnt/spiritfs
+
+    spiritfs mount \
+        --backing-dir /var/lib/spiritros/data/spiritfs \
+        --mount-point /mnt/spiritfs \
         > "${LOG_DIR}/spiritfs.log" 2>&1 &
     echo $! > /var/run/spiritfs.pid
     log "SpiritFS mounted (PID $(cat /var/run/spiritfs.pid))."

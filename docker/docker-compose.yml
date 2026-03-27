@@ -41,6 +41,17 @@ services:
       - SPIRIT_QDRANT_URL=http://qdrant:6334
       - SPIRIT_ETCD_ENDPOINTS=http://etcd:2379
       - SPIRIT_PROMETHEUS_ENDPOINT=0.0.0.0:9090
+      # SpiritFS configuration (consumed by SpiritFsConfig via figment)
+      - SPIRITFS_MOUNT_POINT=/mnt/spiritfs
+      - SPIRITFS_BACKING_DIR=/var/lib/spiritros/data/spiritfs
+      - SPIRITFS_CAS_DIR=/var/lib/spiritros/cas
+      - SPIRITFS_METADATA_DB=/var/lib/spiritros/metadata.db
+      - SPIRITFS_QDRANT_URL=http://qdrant:6334
+      - SPIRITFS_QDRANT_COLLECTION=spiritfs
+      - SPIRITFS_OLLAMA_URL=http://127.0.0.1:11434
+      - SPIRITFS_EMBEDDING_MODEL=nomic-embed-text
+      - SPIRITFS_EMBEDDING_DIMENSIONS=768
+      - SPIRITFS_METRICS_BIND=0.0.0.0:9104
     cap_add:
       - SYS_ADMIN     # Required for FUSE mounts and cgroups
       - NET_ADMIN      # Required for network namespace management

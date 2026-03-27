@@ -1,0 +1,232 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "FUSE Operations / sec",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(spirit_fs_fuse_reads_total[1m])",
+          "legendFormat": "reads/s",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(spirit_fs_fuse_writes_total[1m])",
+          "legendFormat": "writes/s",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(spirit_fs_fuse_lookups_total[1m])",
+          "legendFormat": "lookups/s",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      }
+    },
+    {
+      "title": "FUSE Operation Latency",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, rate(spirit_fs_fuse_op_latency_us_bucket[5m]))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(spirit_fs_fuse_op_latency_us_bucket[5m]))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(spirit_fs_fuse_op_latency_us_bucket[5m]))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "\u00b5s"
+        }
+      }
+    },
+    {
+      "title": "Index Pipeline",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "spirit_fs_queue_depth",
+          "legendFormat": "Queue Depth",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 100 },
+              { "color": "red", "value": 1000 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Files Indexed",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 8 },
+      "targets": [
+        {
+          "expr": "spirit_fs_files_indexed",
+          "legendFormat": "Total Indexed",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Embeddings Generated",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "spirit_fs_embeddings_generated",
+          "legendFormat": "Total Embeddings",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Index Errors",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 8 },
+      "targets": [
+        {
+          "expr": "spirit_fs_errors_total",
+          "legendFormat": "Errors",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Semantic Search Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "targets": [
+        {
+          "expr": "rate(spirit_fs_search_queries_total[5m])",
+          "legendFormat": "search/s",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(spirit_fs_similar_queries_total[5m])",
+          "legendFormat": "similar/s",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(spirit_fs_summarize_requests_total[5m])",
+          "legendFormat": "summarize/s",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      }
+    },
+    {
+      "title": "Search Latency",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, rate(spirit_fs_search_latency_ms_bucket[5m]))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(spirit_fs_search_latency_ms_bucket[5m]))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(spirit_fs_search_latency_ms_bucket[5m]))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "title": "CAS Storage",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 20 },
+      "targets": [
+        {
+          "expr": "spirit_fs_cas_blobs_total",
+          "legendFormat": "Blobs",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "CAS Dedup Hits",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 20 },
+      "targets": [
+        {
+          "expr": "spirit_fs_cas_dedup_hits",
+          "legendFormat": "Dedup Hits",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Model Cache",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 20 },
+      "targets": [
+        {
+          "expr": "spirit_fs_model_cache_entries",
+          "legendFormat": "Cached Models",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["spiritros", "spiritfs", "filesystem"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "SpiritFS Operations",
+  "uid": "spiritfs-ops",
+  "version": 1
+}
