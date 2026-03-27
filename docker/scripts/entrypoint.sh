@@ -182,13 +182,35 @@ fi
 # =============================================================================
 log "SpiritROS Phase 1 initialization complete."
 
-# If no TTY is attached and CMD is spirit-shell, keep the container alive
-# with the background services instead of launching an interactive shell.
-if [ "$1" = "spirit-shell" ] && [ ! -t 0 ]; then
-    log "No TTY detected — running in daemon mode (services only)."
-    log "Attach interactively with: docker exec -it spiritros spirit-shell"
-    # Wait forever, letting the trap handler clean up on SIGTERM
-    exec sleep infinity
+# If CMD is spirit-shell, check for a real interactive terminal.
+# Docker's tty:true allocates a pseudo-TTY that passes [ -t 0 ] but can't
+# answer cursor-position queries. We probe with the DSR escape sequence.
+# The spirit-shell binary also does this check internally as a safety net.
+if [ "$1" = "spirit-shell" ]; then
+    if [ ! -t 0 ]; then
+        log "No TTY detected — running in daemon mode (services only)."
+        log "Attach interactively with: docker exec -it spiritros spirit-shell"
+        exec sleep infinity
+    fi
+
+    # Probe: can the terminal answer a cursor position query?
+    # Send \x1b[6n and wait 0.5s for a response.
+    real_tty=false
+    if command -v stty &>/dev/null; then
+        old_stty=$(stty -g 2>/dev/null || true)
+        stty raw -echo min 0 time 5 2>/dev/null || true
+        printf '\033[6n' > /dev/tty 2>/dev/null || true
+        if read -r -t 1 -d 'R' response < /dev/tty 2>/dev/null; then
+            real_tty=true
+        fi
+        stty "$old_stty" 2>/dev/null || true
+    fi
+
+    if [ "$real_tty" = false ]; then
+        log "Pseudo-TTY detected but no terminal emulator — running in daemon mode."
+        log "Attach interactively with: docker exec -it spiritros spirit-shell"
+        exec sleep infinity
+    fi
 fi
 
 log "Executing: $*"
