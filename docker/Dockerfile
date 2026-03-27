@@ -99,8 +99,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -fsSL https://ollama.com/install.sh | sh
 
 # Create spiritros user and directories
-RUN groupadd --gid 1000 spirit \
-    && useradd --uid 1000 --gid spirit --shell /bin/bash --create-home spirit \
+RUN groupadd --force --gid 1000 spirit \
+    && useradd --non-unique --uid 1000 --gid spirit --shell /bin/bash --create-home spirit \
     && mkdir -p /opt/spiritros/bin \
                 /opt/spiritros/config \
                 /opt/spiritros/scripts \
