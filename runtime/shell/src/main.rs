@@ -15,6 +15,7 @@
     clippy::must_use_candidate
 )]
 
+use std::io::Write;
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
@@ -249,23 +250,77 @@ fn run_repl(config: ShellConfig) -> Result<()> {
                 if msg.contains("cursor position") {
                     cursor_retries += 1;
                     if cursor_retries <= max_cursor_retries {
-                        // Terminal may be slow to respond (VS Code, Docker).
-                        // Retry — reedline often succeeds on subsequent attempts
-                        // once the terminal has warmed up.
                         std::thread::sleep(std::time::Duration::from_millis(
                             200 * u64::from(cursor_retries),
                         ));
                         continue;
                     }
-                    eprintln!(
-                        "\nTerminal cannot handle cursor position queries after \
-                         {max_cursor_retries} attempts.\n\
-                         Try: TERM=xterm-256color spirit-shell\n\
-                         Or attach directly: docker exec -it <container> spirit-shell"
+                    // Reedline can't work in this terminal — fall back to simple mode
+                    warn!(
+                        "Reedline cursor query failed after {max_cursor_retries} attempts, \
+                         switching to simple input mode"
                     );
-                } else {
-                    eprintln!("Error reading input: {err}");
+                    eprintln!(
+                        "\x1b[33mNote:\x1b[0m Terminal does not support cursor queries. \
+                         Using simple input mode (no tab completion or syntax highlighting)."
+                    );
+                    return run_simple_repl(rt, state);
                 }
+                eprintln!("Error reading input: {err}");
+                break;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Fallback REPL using basic stdin when reedline cannot work (e.g. Docker pseudo-TTY
+/// that doesn't support cursor position queries).
+#[allow(clippy::needless_pass_by_value, clippy::unnecessary_wraps)]
+fn run_simple_repl(rt: tokio::runtime::Runtime, state: SharedState) -> Result<()> {
+    let stdin = std::io::stdin();
+    let mut input = String::new();
+
+    loop {
+        // Build a simple prompt string
+        let prompt_str = {
+            let state_guard = rt.block_on(state.read());
+            let cwd = std::env::current_dir().map_or_else(
+                |_| "?".into(),
+                |p| p.file_name().map_or_else(|| "/".into(), |n| n.to_string_lossy().into_owned()),
+            );
+            format!("spirit:{cwd} ({})> ", state_guard.config.llm.model)
+        };
+
+        // Print prompt and flush
+        print!("{prompt_str}");
+        if std::io::stdout().flush().is_err() {
+            break;
+        }
+
+        // Read line
+        input.clear();
+        match stdin.read_line(&mut input) {
+            Ok(0) => {
+                // EOF (Ctrl+D)
+                println!("\nGoodbye.");
+                break;
+            }
+            Ok(_) => {
+                let trimmed = input.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+
+                let resolution = {
+                    let state_guard = rt.block_on(state.read());
+                    state_guard.resolver.resolve(trimmed)
+                };
+                rt.block_on(handle_resolution(&state, resolution));
+            }
+            Err(e) => {
+                eprintln!("Error reading input: {e}");
                 break;
             }
         }
