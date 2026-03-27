@@ -4,7 +4,7 @@
 # ==============================================================================
 # Stage 1: Builder
 # ==============================================================================
-FROM rust:1.82-bookworm AS builder
+FROM rust:1.86-bookworm AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
@@ -65,11 +65,16 @@ COPY patches/ patches/
 
 # Build release binaries — enable fuse feature since libfuse3-dev is installed
 RUN cargo build --release --workspace --features spirit-spiritfs/fuse \
-    && strip target/release/spirit-shell 2>/dev/null || true \
-    && strip target/release/spirit-infer 2>/dev/null || true \
-    && strip target/release/spirit-guard 2>/dev/null || true \
-    && strip target/release/spiritfs 2>/dev/null || true \
-    && strip target/release/spirit-bench 2>/dev/null || true
+    && for bin in spirit-shell spirit-infer spirit-guard spiritfs spirit-bench; do \
+         strip "target/release/$bin" 2>/dev/null || true; \
+       done
+
+# Stage binaries into a single directory so COPY in the runtime stage doesn't
+# fail when an optional binary (e.g. spiritfs) wasn't produced.
+RUN mkdir -p /build/dist \
+    && for bin in spirit-shell spirit-infer spirit-guard spiritfs spirit-bench; do \
+         cp "target/release/$bin" /build/dist/ 2>/dev/null || true; \
+       done
 
 # ==============================================================================
 # Stage 2: Runtime
@@ -87,6 +92,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fuse3 \
     curl \
     ca-certificates \
+    zstd \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Ollama
@@ -104,12 +110,8 @@ RUN groupadd --gid 1000 spirit \
                 /mnt/spiritfs \
     && chown -R spirit:spirit /opt/spiritros /var/lib/spiritros /var/log/spiritros /mnt/spiritfs
 
-# Copy binaries from builder
-COPY --from=builder /build/target/release/spirit-shell /opt/spiritros/bin/
-COPY --from=builder /build/target/release/spirit-infer /opt/spiritros/bin/
-COPY --from=builder /build/target/release/spirit-guard /opt/spiritros/bin/
-COPY --from=builder /build/target/release/spiritfs /opt/spiritros/bin/
-COPY --from=builder /build/target/release/spirit-bench /opt/spiritros/bin/
+# Copy all produced binaries from the builder staging directory
+COPY --from=builder /build/dist/ /opt/spiritros/bin/
 
 # Copy configuration and scripts
 COPY docker/config/ /opt/spiritros/config/
