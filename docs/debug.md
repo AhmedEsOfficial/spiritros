@@ -96,6 +96,10 @@ docker compose -f docker/docker-compose.yml down && just docker-up
 # End-to-End Test Commands
 Run inside the Docker container (docker compose exec -it spiritros spirit-shell) or locally with Ollama running. The tests are grouped by feature. Expected behavior is noted after each command.
 
+
+docker exec -it spiritros spirit-shell
+
+
 1. Shell Startup & Basics
 
 help

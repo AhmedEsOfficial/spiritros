@@ -1,0 +1,4 @@
+#!/bin/bash
+# Convenience wrapper: allows running `spirit model list` etc. from any shell
+# inside the container by delegating to spirit-shell's non-interactive mode.
+exec spirit-shell -c "spirit $*"

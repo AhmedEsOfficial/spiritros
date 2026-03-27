@@ -118,7 +118,8 @@ COPY docker/config/ /opt/spiritros/config/
 COPY docker/scripts/ /opt/spiritros/scripts/
 
 RUN chmod +x /opt/spiritros/scripts/*.sh \
-    && chmod +x /opt/spiritros/bin/* 2>/dev/null || true
+    && chmod +x /opt/spiritros/bin/* 2>/dev/null || true \
+    && cp /opt/spiritros/scripts/spirit /opt/spiritros/bin/spirit 2>/dev/null || true
 
 # Add binaries to PATH
 ENV PATH="/opt/spiritros/bin:${PATH}"
@@ -128,6 +129,7 @@ ENV SPIRIT_DATA_DIR="/var/lib/spiritros/data"
 ENV SPIRIT_MODEL_DIR="/var/lib/spiritros/models"
 ENV OLLAMA_HOST="0.0.0.0:11434"
 ENV OLLAMA_MODELS="/var/lib/spiritros/models"
+ENV TERM="xterm-256color"
 
 # Ports:
 #   11434 — Ollama API

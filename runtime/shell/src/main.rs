@@ -148,21 +148,17 @@ fn run_command(config: &ShellConfig, cmd: &str) -> Result<()> {
 /// Run the interactive read-eval-print loop.
 #[allow(clippy::needless_pass_by_value)]
 fn run_repl(config: ShellConfig) -> Result<()> {
-    // ── Guard: verify we have a usable interactive terminal ─────────────
-    // Docker pseudo-TTYs (tty: true) pass the isatty check but can't handle
-    // cursor-position queries that reedline needs. We probe before starting
-    // the full editor to give a clear message instead of a cryptic crash.
-    if !is_real_interactive_terminal() {
+    // ── Guard: basic isatty check ───────────────────────────────────────
+    // The entrypoint.sh already gates on [ -t 0 ] for docker compose up.
+    // Here we catch the case where someone pipes into spirit-shell or
+    // redirects stdin. We trust isatty — docker exec -it provides a real
+    // TTY that reedline can use.
+    if unsafe { libc::isatty(libc::STDIN_FILENO) } == 0 {
         eprintln!(
             "Spirit Shell requires an interactive terminal.\n\
-             Attach with: docker exec -it <container> spirit-shell\n\
-             \n\
-             Running in daemon mode (background services only)."
+             Use: docker exec -it <container> spirit-shell"
         );
-        // Block forever so the container stays alive for docker exec
-        loop {
-            std::thread::sleep(std::time::Duration::from_secs(3600));
-        }
+        return Ok(());
     }
 
     let rt = tokio::runtime::Runtime::new()?;
@@ -210,7 +206,9 @@ fn run_repl(config: ShellConfig) -> Result<()> {
         .with_hinter(hinter)
         .with_highlighter(highlighter);
 
+    let max_cursor_retries = 3u32;
     let mut prompt = SpiritPrompt::new();
+    let mut cursor_retries = 0u32;
 
     // ── REPL ─────────────────────────────────────────────────────────────
     loop {
@@ -222,6 +220,7 @@ fn run_repl(config: ShellConfig) -> Result<()> {
 
         match line_editor.read_line(&prompt) {
             Ok(Signal::Success(line)) => {
+                cursor_retries = 0; // reset on success
                 let trimmed = line.trim();
                 if trimmed.is_empty() {
                     continue;
@@ -241,15 +240,28 @@ fn run_repl(config: ShellConfig) -> Result<()> {
                 break;
             }
             Ok(Signal::CtrlC) => {
+                cursor_retries = 0;
                 // Ctrl+C cancels the current line, doesn't exit
                 println!();
             }
             Err(err) => {
                 let msg = err.to_string();
                 if msg.contains("cursor position") {
+                    cursor_retries += 1;
+                    if cursor_retries <= max_cursor_retries {
+                        // Terminal may be slow to respond (VS Code, Docker).
+                        // Retry — reedline often succeeds on subsequent attempts
+                        // once the terminal has warmed up.
+                        std::thread::sleep(std::time::Duration::from_millis(
+                            200 * u64::from(cursor_retries),
+                        ));
+                        continue;
+                    }
                     eprintln!(
-                        "\nTerminal does not support cursor queries (Docker pseudo-TTY?).\n\
-                         Attach interactively: docker exec -it <container> spirit-shell"
+                        "\nTerminal cannot handle cursor position queries after \
+                         {max_cursor_retries} attempts.\n\
+                         Try: TERM=xterm-256color spirit-shell\n\
+                         Or attach directly: docker exec -it <container> spirit-shell"
                     );
                 } else {
                     eprintln!("Error reading input: {err}");
@@ -260,57 +272,6 @@ fn run_repl(config: ShellConfig) -> Result<()> {
     }
 
     Ok(())
-}
-
-/// Check whether stdin is a real interactive terminal capable of handling
-/// cursor-position queries. Docker `tty: true` creates a pseudo-TTY that
-/// passes `isatty()` but can't answer `\x1b[6n` (cursor position request).
-///
-/// We probe by writing the DSR (Device Status Report) escape sequence and
-/// checking if we get a response within a short timeout using crossterm's
-/// non-blocking event polling.
-fn is_real_interactive_terminal() -> bool {
-    use crossterm::event;
-    use std::io::Write;
-    use std::time::Duration;
-
-    // Basic check: is stdin a TTY at all?
-    if unsafe { libc::isatty(libc::STDIN_FILENO) } == 0 {
-        return false;
-    }
-
-    // Probe: send cursor position request and see if we get a reply.
-    // This distinguishes a real terminal from a Docker pseudo-TTY that
-    // allocates a pts but has no terminal emulator answering queries.
-    let Ok(()) = crossterm::terminal::enable_raw_mode() else {
-        return false;
-    };
-
-    let result = (|| -> bool {
-        // Write DSR: \x1b[6n (Device Status Report — cursor position)
-        let mut stdout = std::io::stdout();
-        if stdout.write_all(b"\x1b[6n").is_err() || stdout.flush().is_err() {
-            return false;
-        }
-
-        // A real terminal answers with \x1b[<row>;<col>R within milliseconds.
-        // A Docker pseudo-TTY with no terminal emulator never answers.
-        // Use crossterm::event::poll for non-blocking, timeout-safe waiting.
-        match event::poll(Duration::from_millis(500)) {
-            Ok(true) => {
-                // Something arrived — drain the cursor position response.
-                // crossterm may parse it as a key event or we may need to
-                // read raw. Either way, arrival means the terminal is real.
-                let _ = event::read();
-                true
-            }
-            _ => false,
-        }
-    })();
-
-    let _ = crossterm::terminal::disable_raw_mode();
-
-    result
 }
 
 /// Handle a resolved command.

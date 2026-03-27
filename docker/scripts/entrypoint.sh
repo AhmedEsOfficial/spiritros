@@ -20,6 +20,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG_DIR="${SPIRIT_LOG_DIR:-/var/log/spiritros}"
 CONFIG="${SPIRIT_CONFIG:-/opt/spiritros/config/spirit.yaml}"
 
+# Ensure TERM is set — reedline needs this for cursor position queries.
+export TERM="${TERM:-xterm-256color}"
+
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [entrypoint] $*"
 }
@@ -182,35 +185,15 @@ fi
 # =============================================================================
 log "SpiritROS Phase 1 initialization complete."
 
-# If CMD is spirit-shell, check for a real interactive terminal.
-# Docker's tty:true allocates a pseudo-TTY that passes [ -t 0 ] but can't
-# answer cursor-position queries. We probe with the DSR escape sequence.
-# The spirit-shell binary also does this check internally as a safety net.
-if [ "$1" = "spirit-shell" ]; then
-    if [ ! -t 0 ]; then
-        log "No TTY detected — running in daemon mode (services only)."
-        log "Attach interactively with: docker exec -it spiritros spirit-shell"
-        exec sleep infinity
-    fi
-
-    # Probe: can the terminal answer a cursor position query?
-    # Send \x1b[6n and wait 0.5s for a response.
-    real_tty=false
-    if command -v stty &>/dev/null; then
-        old_stty=$(stty -g 2>/dev/null || true)
-        stty raw -echo min 0 time 5 2>/dev/null || true
-        printf '\033[6n' > /dev/tty 2>/dev/null || true
-        if read -r -t 1 -d 'R' response < /dev/tty 2>/dev/null; then
-            real_tty=true
-        fi
-        stty "$old_stty" 2>/dev/null || true
-    fi
-
-    if [ "$real_tty" = false ]; then
-        log "Pseudo-TTY detected but no terminal emulator — running in daemon mode."
-        log "Attach interactively with: docker exec -it spiritros spirit-shell"
-        exec sleep infinity
-    fi
+# If CMD is spirit-shell and no TTY is attached, run in daemon mode.
+# The spirit-shell binary performs its own terminal capability probe
+# (cursor-position query via crossterm) and handles degraded pseudo-TTYs
+# gracefully, so we only gate on the basic isatty check here.
+if [ "$1" = "spirit-shell" ] && [ ! -t 0 ]; then
+    log "No TTY detected — running in daemon mode (services only)."
+    log "Attach interactively with: docker exec -it spiritros spirit-shell"
+    # Wait forever, letting the trap handler clean up on SIGTERM
+    exec sleep infinity
 fi
 
 log "Executing: $*"
