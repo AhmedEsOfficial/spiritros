@@ -355,7 +355,7 @@ mod tests {
 
     #[test]
     fn test_read_write_roundtrip() {
-        let (dir, mgr) = make_fake_cgroup();
+        let (_dir, mgr) = make_fake_cgroup();
         let config = MemoryConfig::for_test();
         mgr.setup_zones(&config).unwrap();
 
@@ -367,7 +367,7 @@ mod tests {
 
     #[test]
     fn test_model_zone_has_memory_min() {
-        let (dir, mgr) = make_fake_cgroup();
+        let (_dir, mgr) = make_fake_cgroup();
         let config = MemoryConfig::for_test();
         mgr.setup_zones(&config).unwrap();
 
@@ -380,7 +380,7 @@ mod tests {
 
     #[test]
     fn test_model_zone_swap_disabled() {
-        let (dir, mgr) = make_fake_cgroup();
+        let (_dir, mgr) = make_fake_cgroup();
         let config = MemoryConfig::for_test();
         mgr.setup_zones(&config).unwrap();
 
@@ -392,7 +392,7 @@ mod tests {
 
     #[test]
     fn test_general_zone_swap_is_max() {
-        let (dir, mgr) = make_fake_cgroup();
+        let (_dir, mgr) = make_fake_cgroup();
         let config = MemoryConfig::for_test();
         mgr.setup_zones(&config).unwrap();
 
@@ -404,7 +404,7 @@ mod tests {
 
     #[test]
     fn test_set_memory_limit_updates() {
-        let (dir, mgr) = make_fake_cgroup();
+        let (_dir, mgr) = make_fake_cgroup();
         let config = MemoryConfig::for_test();
         mgr.setup_zones(&config).unwrap();
 

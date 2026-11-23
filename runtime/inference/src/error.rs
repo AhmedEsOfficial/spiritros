@@ -136,7 +136,7 @@ mod tests {
             limit: 8,
         };
         let s = err.to_string();
-        assert!(s.contains("8"));
+        assert!(s.contains('8'));
     }
 
     #[test]

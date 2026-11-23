@@ -288,7 +288,10 @@ fn run_simple_repl(rt: tokio::runtime::Runtime, state: SharedState) -> Result<()
             let state_guard = rt.block_on(state.read());
             let cwd = std::env::current_dir().map_or_else(
                 |_| "?".into(),
-                |p| p.file_name().map_or_else(|| "/".into(), |n| n.to_string_lossy().into_owned()),
+                |p| {
+                    p.file_name()
+                        .map_or_else(|| "/".into(), |n| n.to_string_lossy().into_owned())
+                },
             );
             format!("spirit:{cwd} ({})> ", state_guard.config.llm.model)
         };

@@ -443,7 +443,7 @@ mod tests {
     fn test_zone_labels_are_unique() {
         let labels: Vec<&str> = MemoryZone::ALL.iter().map(MemoryZone::label).collect();
         let mut deduped = labels.clone();
-        deduped.sort();
+        deduped.sort_unstable();
         deduped.dedup();
         assert_eq!(labels.len(), deduped.len());
     }
@@ -455,7 +455,7 @@ mod tests {
             .map(MemoryZone::cgroup_name)
             .collect();
         let mut deduped = names.clone();
-        deduped.sort();
+        deduped.sort_unstable();
         deduped.dedup();
         assert_eq!(names.len(), deduped.len());
     }

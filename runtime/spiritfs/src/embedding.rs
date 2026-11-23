@@ -283,8 +283,8 @@ mod tests {
 
         assert!(chunks.len() > 1);
         // Verify overlap: last 2 words of chunk N appear at start of chunk N+1
-        for i in 0..chunks.len() {
-            assert_eq!(chunks[i].chunk_index, i as u32);
+        for (i, chunk) in chunks.iter().enumerate() {
+            assert_eq!(chunk.chunk_index, i as u32);
         }
     }
 
