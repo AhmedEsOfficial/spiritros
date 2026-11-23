@@ -65,7 +65,7 @@ docs(architecture): update memory zone diagram for Phase 1
 ### Rust
 
 - Run `cargo fmt --workspace` before committing.
-- Run `cargo clippy --workspace -- -D warnings` and fix all warnings.
+- Run `cargo clippy --workspace --all-targets -- -D warnings` and fix all warnings.
 - No `unwrap()` in library code. Use `?` propagation or explicit error handling. `unwrap()` is allowed in tests.
 - Use `thiserror` for library errors, `anyhow` for binary errors.
 - Prefer `&str` over `String` in function signatures when ownership is not needed.
@@ -80,9 +80,9 @@ docs(architecture): update memory zone diagram for Phase 1
 ### Documentation
 
 - Every public function, struct, and module must have a doc comment (`///`).
-- Architecture decisions go in `docs/adr/` as numbered ADR files.
+- Architecture decisions are recorded in `docs/src/appendices/adr.md`.
 
-For full conventions, see `CLAUDE.md`.
+Architecture and phase notes live in [`docs/`](docs/).
 
 ## Testing Requirements
 
@@ -101,7 +101,7 @@ For example: `test_memory_zone_allocation_respects_model_limit()`
 
 ### Integration Tests
 
-Place integration tests in `tests/integration/`. These test cross-module interactions.
+Place integration tests in each crate's `tests/` directory. These test cross-module interactions.
 
 ### Benchmarks
 

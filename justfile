@@ -1,4 +1,4 @@
-# SpiritROS — LLM-Native Robot Operating System
+# SpiritROS — experimental LLM-inference runtime
 # Task runner recipes for development, testing, and deployment.
 
 # Default recipe
@@ -22,7 +22,7 @@ test-crate crate:
 
 # Lint
 lint:
-    cargo clippy --workspace -- -D warnings
+    cargo clippy --workspace --all-targets -- -D warnings
     cargo fmt --all --check
 
 # Format code

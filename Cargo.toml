@@ -19,8 +19,8 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.87"
 license = "Apache-2.0"
-repository = "https://github.com/spiritros/spiritros"
-description = "SpiritROS — The First LLM-Native Operating System"
+repository = "https://github.com/AhmedEsOfficial/spiritros"
+description = "SpiritROS — An experimental LLM-inference-oriented OS runtime"
 
 [workspace.dependencies]
 # Async runtime

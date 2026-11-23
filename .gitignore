@@ -1,8 +1,7 @@
 # Rust
 target/
 **/*.rs.bk
-Cargo.lock
-!benchmarks/Cargo.lock
+# Cargo.lock is committed (workspace ships binaries)
 
 # IDE
 .idea/
@@ -50,3 +49,8 @@ models/
 *.profraw
 lcov.info
 coverage/
+
+# Local AI-assistant files
+CLAUDE.md
+.claude/
+AGENTS.md

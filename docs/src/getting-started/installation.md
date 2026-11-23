@@ -20,7 +20,7 @@ SpiritROS Phase 1 runs as a Docker container on a Linux host. This page covers t
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/spiritros/spiritros.git
+git clone https://github.com/AhmedEsOfficial/spiritros.git
 cd spiritros
 ```
 

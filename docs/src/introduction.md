@@ -1,6 +1,6 @@
 # Introduction
 
-SpiritROS is the first operating system designed from the ground up for LLM inference. Rather than running inference workloads on top of a general-purpose OS that was designed for web servers and desktop applications, SpiritROS treats model weights, KV-caches, and inference sessions as first-class operating system resources.
+SpiritROS is an experiment in operating-system support for LLM inference. Rather than running inference workloads on top of a general-purpose OS that was designed for web servers and desktop applications, SpiritROS treats model weights, KV-caches, and inference sessions as first-class operating system resources.
 
 ## Why SpiritROS?
 

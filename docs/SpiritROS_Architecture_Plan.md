@@ -1,4 +1,6 @@
-# SpiritROS — The First LLM-Native Operating System
+# SpiritROS — LLM-Native Operating System: Architecture Plan
+
+> **Status note:** this is the original design/vision document. It describes the intended end state, including performance goals and kernel work that is **not implemented**. For what exists today, see the [README](../README.md).
 
 **Version:** 0.1.0-alpha · **Codename:** *Ghost in the Machine*
 **Classification:** Architecture & Implementation Plan

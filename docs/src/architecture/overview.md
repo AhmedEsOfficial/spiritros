@@ -92,4 +92,4 @@ Every IPC message between SpiritROS components carries capability tokens.
 | Phase 3 | Full microkernel with hardware memory zone support | Planned |
 | Phase 4 | Multi-node distributed inference | Planned |
 
-For the complete architecture specification, see `SpiritROS_Architecture_Plan.md` in the repository root.
+For the complete architecture specification, see [`SpiritROS_Architecture_Plan.md`](../../SpiritROS_Architecture_Plan.md) in `docs/`.
